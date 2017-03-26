@@ -59,14 +59,72 @@ def make_map(cells):
                 map[(x+1) * TILE_SIZE - 1][y * TILE_SIZE + k].wall = cells[x][y].bottom
 
 def render_all(player, con):
-    player.draw(con)
     for y in range(MAP_HEIGHT):
         for x in range(MAP_WIDTH):
             wall = map[x][y].wall
-            if x == 0 or y == 0:
-                libtcod.console_put_char_ex(con, x, y, '#', libtcod.white, libtcod.dark_green)
             if wall:
-                libtcod.console_put_char_ex(con, x, y, '#', libtcod.white, libtcod.dark_blue)
+                libtcod.console_put_char_ex(con, x, y, '#', libtcod.white, libtcod.black)
+
+            else:
+                libtcod.console_put_char_ex(con, x, y, '.', libtcod.white, libtcod.black)
+
+    player.draw(con)
+
+def render_solution(cells, con):
+    visited = [[ False
+        for y in xrange(MAP_COLS)]
+        for x in xrange(MAP_ROWS)]
+
+    # print cells[11][0].bottom
+
+    path = []
+    dfs(cells, 0, 0, visited, path)
+
+    # print path
+
+    for y in range(MAP_COLS):
+        for x in range(MAP_ROWS):
+            if (x, y) in path:
+                for i in xrange(1, TILE_SIZE - 1):
+                    for j in xrange(1, TILE_SIZE - 1):
+                        libtcod.console_put_char_ex(con, x * TILE_SIZE + i, y * TILE_SIZE + j, 'X', libtcod.green, libtcod.black)
+
+def dfs(cells, x, y, visited, path):
+    if x < 0 or y < 0 or x >= MAP_ROWS or y >= MAP_COLS:
+        return False
+
+    # print x
+    # print y
+    if visited[x][y]:
+        return False
+
+    if x == MAP_ROWS - 1 and y == MAP_COLS - 1:
+        return True
+
+    visited[x][y] = True
+    if not cells[x][y].right:
+        path.append((x, y))
+        if dfs(cells, x, y+1, visited, path):
+            return True
+        path.remove((x, y))
+
+    if not cells[x][y].top:
+        path.append((x, y))
+        if dfs(cells, x-1, y, visited, path):
+            return True
+        path.remove((x, y))
+
+    if not cells[x][y].left:
+        path.append((x, y))
+        if dfs(cells, x, y-1, visited, path):
+            return True
+        path.remove((x, y))
+
+    if not cells[x][y].bottom:
+        path.append((x, y))
+        if dfs(cells, x+1, y, visited, path):
+            return True
+        path.remove((x, y))
 
 def keyboard_input(player):
 
@@ -115,8 +173,14 @@ def main():
 
         player.erase(con)
 
-        exit = keyboard_input(player)
-        if exit:
+        quit = keyboard_input(player)
+
+        if quit:
+            render_solution(cells, con)
+            libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
+            libtcod.console_flush()
+
+            key = libtcod.console_wait_for_keypress(True)
             break
 
 if __name__ == '__main__':
