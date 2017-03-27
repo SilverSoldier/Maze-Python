@@ -68,6 +68,8 @@ def render_all(player, con):
             else:
                 libtcod.console_put_char_ex(con, x, y, '.', libtcod.white, libtcod.black)
 
+    libtcod.console_put_char_ex(con, MAP_WIDTH-2, MAP_HEIGHT-2, 'X', libtcod.green, libtcod.white)
+
     player.draw(con)
 
 def render_solution(cells, con):
@@ -77,7 +79,7 @@ def render_solution(cells, con):
 
     # print cells[11][0].bottom
 
-    path = []
+    path = [(0, 0)]
     dfs(cells, 0, 0, visited, path)
 
     # print path
@@ -90,41 +92,45 @@ def render_solution(cells, con):
                         libtcod.console_put_char_ex(con, x * TILE_SIZE + i, y * TILE_SIZE + j, 'X', libtcod.green, libtcod.black)
 
 def dfs(cells, x, y, visited, path):
-    if x < 0 or y < 0 or x >= MAP_ROWS or y >= MAP_COLS:
-        return False
+    # if x < 0 or y < 0 or x >= MAP_ROWS or y >= MAP_COLS:
+    #     return False
 
     # print x
     # print y
     if visited[x][y]:
         return False
 
+    path.append((x, y))
     if x == MAP_ROWS - 1 and y == MAP_COLS - 1:
         return True
 
     visited[x][y] = True
     if not cells[x][y].right:
-        path.append((x, y))
+        # path.append((x, y+1))
         if dfs(cells, x, y+1, visited, path):
             return True
-        path.remove((x, y))
+        # path.remove((x, y+1))
 
     if not cells[x][y].top:
-        path.append((x, y))
+        # path.append((x-1, y))
         if dfs(cells, x-1, y, visited, path):
             return True
-        path.remove((x, y))
+        # path.remove((x-1, y))
 
     if not cells[x][y].left:
-        path.append((x, y))
+        # path.append((x, y-1))
         if dfs(cells, x, y-1, visited, path):
             return True
-        path.remove((x, y))
+        # path.remove((x, y-1))
 
     if not cells[x][y].bottom:
-        path.append((x, y))
+        # path.append((x+1, y))
         if dfs(cells, x+1, y, visited, path):
             return True
-        path.remove((x, y))
+        # path.remove((x+1, y))
+
+    path.remove((x, y))
+    return False
 
 def keyboard_input(player):
 
@@ -149,7 +155,7 @@ def keyboard_input(player):
 
 def main():
 
-    player = Object(1, 1, '@', libtcod.white)
+    player = Object(1, 1, '@', libtcod.dark_blue)
 
     libtcod.console_set_custom_font('arial12x12.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
 
@@ -174,6 +180,9 @@ def main():
         player.erase(con)
 
         quit = keyboard_input(player)
+
+        if player.x == MAP_WIDTH-2 and player.y == MAP_HEIGHT-2:
+            break
 
         if quit:
             render_solution(cells, con)
