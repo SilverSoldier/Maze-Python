@@ -64,9 +64,3 @@ def generate_maze(rows, cols):
 
     # print cells_finished
     return cells
-
-cells = generate_maze(13, 13)
-print cells[10][0].left
-print cells[10][0].right
-print cells[10][0].top
-print cells[10][0].bottom

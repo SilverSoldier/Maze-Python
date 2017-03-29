@@ -34,24 +34,23 @@ def generate_maze(rows, cols):
 
         # choose random wall
         wall = random.choice(edges)
+        edges.remove(wall)
 
         x = wall[0]
         y = wall[1]
 
         if y > 0 and wall[2] == 'L' and cell_set.find((x, y)) != cell_set.find((x, y-1)):
             cell_set.union((x, y), (x, y-1))
-            edges.remove(wall)
             cells[x][y].left = False
             cells[x][y-1].right = False
 
         if x > 0 and wall[2] == 'U' and cell_set.find((x, y)) != cell_set.find((x-1, y)):
             cell_set.union((x, y), (x-1, y))
-            edges.remove(wall)
             cells[x][y].top = False
             cells[x-1][y].bottom = False
 
-        if y == 0 and wall[2] == 'L' or x == 0 and wall[2] == 'U':
-            edges.remove(wall)
+        # if y == 0 and wall[2] == 'L' or x == 0 and wall[2] == 'U':
+            # edges.remove(wall)
 
     return cells
 

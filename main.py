@@ -1,5 +1,6 @@
 import libtcodpy as libtcod
 import kruskal
+import prim
 
 SCREEN_WIDTH = 110
 SCREEN_HEIGHT = 60
@@ -155,9 +156,14 @@ def keyboard_input(player):
 
 def main():
 
-    player = Object(1, 1, '@', libtcod.dark_blue)
+    player = Object(1, 1, '@', libtcod.red)
 
     libtcod.console_set_custom_font('arial12x12.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
+
+    print "Which algorithm would you prefer for generating maze?"
+    print "Enter 1 for randomized Kruskal's, the mazes have a lot of dead ends, but have a regular pattern."
+    print "Enter 2 for randomized Prim's, the mazes have a lot of dead ends."
+    choice = int(raw_input())
 
     libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'maze game', False)
 
@@ -166,6 +172,8 @@ def main():
     libtcod.sys_set_fps(LIMIT_FPS)
 
     cells = kruskal.generate_maze(MAP_ROWS, MAP_COLS)
+
+    # cells = prim.generate_maze(MAP_ROWS, MAP_COLS)
 
     make_map(cells)
 
