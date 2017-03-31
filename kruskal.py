@@ -8,7 +8,7 @@ class Cell:
         self.left = True
         self.right = True
 
-def generate_maze(rows, cols):
+def init_variables(rows, cols):
 
     cell_list = []
     for i in xrange(rows):
@@ -30,27 +30,29 @@ def generate_maze(rows, cols):
             edges.append((x, y, 'L'))
             edges.append((x, y, 'U'))
 
-    while cell_set.size() != 1:
+    return (edges, cell_set, cell_list, cells)
 
-        # choose random wall
-        wall = random.choice(edges)
-        edges.remove(wall)
+def generate_maze(edges, cell_set, cell_list, cells):
 
-        x = wall[0]
-        y = wall[1]
+    # choose random wall
+    wall = random.choice(edges)
+    edges.remove(wall)
 
-        if y > 0 and wall[2] == 'L' and cell_set.find((x, y)) != cell_set.find((x, y-1)):
-            cell_set.union((x, y), (x, y-1))
-            cells[x][y].left = False
-            cells[x][y-1].right = False
+    x = wall[0]
+    y = wall[1]
 
-        if x > 0 and wall[2] == 'U' and cell_set.find((x, y)) != cell_set.find((x-1, y)):
-            cell_set.union((x, y), (x-1, y))
-            cells[x][y].top = False
-            cells[x-1][y].bottom = False
+    if y > 0 and wall[2] == 'L' and cell_set.find((x, y)) != cell_set.find((x, y-1)):
+        cell_set.union((x, y), (x, y-1))
+        cells[x][y].left = False
+        cells[x][y-1].right = False
 
-        # if y == 0 and wall[2] == 'L' or x == 0 and wall[2] == 'U':
-            # edges.remove(wall)
+    if x > 0 and wall[2] == 'U' and cell_set.find((x, y)) != cell_set.find((x-1, y)):
+        cell_set.union((x, y), (x-1, y))
+        cells[x][y].top = False
+        cells[x-1][y].bottom = False
+
+    # if y == 0 and wall[2] == 'L' or x == 0 and wall[2] == 'U':
+        # edges.remove(wall)
 
     return cells
 

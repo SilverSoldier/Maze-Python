@@ -7,15 +7,18 @@ class Cell:
         self.left = True
         self.right = True
 
-def generate_maze(rows, cols):
-    # left: 0, top: 1, right: 2, bottom: 3
-
+def init_variables(rows, cols):
     cells = [[ Cell()
         for y in range(cols) ]
         for x in range(rows) ]
 
     wall_set = [(0, 0, 2), (0, 0, 3)]
     cells_finished = [(0, 0)]
+
+    return (wall_set, cells_finished, cells)
+
+def generate_maze(wall_set, cells_finished, cells):
+    # left: 0, top: 1, right: 2, bottom: 3
 
     while len(cells_finished) != rows*cols:
     # while len(cells_finished) != 2:

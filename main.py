@@ -15,6 +15,10 @@ MAP_HEIGHT = TILE_SIZE * MAP_COLS
 
 LIMIT_FPS = 20
 
+FOV_ALGO = 0 # default field of view algorithm provided by libtcod
+FOV_LIGHT_WALLS = True
+TORCH_RADIUS = 40
+
 class Object:
     def __init__(self, x, y, char, color):
         self.x = x
@@ -37,6 +41,7 @@ class Object:
 class Tile:
     def __init__(self, is_wall):
         self.wall = is_wall
+        self.explored = False
 
 def make_map(cells):
     global map
@@ -59,17 +64,31 @@ def make_map(cells):
                 map[x * TILE_SIZE + k][(y+1) * TILE_SIZE - 1].wall =  cells[x][y].right
                 map[(x+1) * TILE_SIZE - 1][y * TILE_SIZE + k].wall = cells[x][y].bottom
 
-def render_all(player, con):
+def render_all(player, con, fov_map, check_explored):
+    libtcod.map_compute_fov(fov_map, player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
+
     for y in range(MAP_HEIGHT):
         for x in range(MAP_WIDTH):
+            visible = libtcod.map_is_in_fov(fov_map, x, y)
+            compute_fov = False
             wall = map[x][y].wall
-            if wall:
-                libtcod.console_put_char_ex(con, x, y, '#', libtcod.white, libtcod.black)
+            if not visible and (map[x][y].explored or not check_explored):
+                if wall:
+                    libtcod.console_put_char_ex(con, x, y, '#', libtcod.grey, libtcod.black)
 
-            else:
-                libtcod.console_put_char_ex(con, x, y, '.', libtcod.white, libtcod.black)
+                else:
+                    libtcod.console_put_char_ex(con, x, y, '.', libtcod.grey, libtcod.black)
+
+            if visible:
+                map[x][y].explored = True
+                if wall:
+                    libtcod.console_put_char_ex(con, x, y, '#', libtcod.white, libtcod.black)
+
+                else:
+                    libtcod.console_put_char_ex(con, x, y, '.', libtcod.white, libtcod.black)
 
     libtcod.console_put_char_ex(con, MAP_WIDTH-2, MAP_HEIGHT-2, 'X', libtcod.green, libtcod.white)
+
 
     player.draw(con)
 
@@ -142,15 +161,19 @@ def keyboard_input(player):
 
     if libtcod.console_is_key_pressed(libtcod.KEY_UP):
         player.move(0, -1)
+        compute_fov = True
 
     if libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
         player.move(0, 1)
+        compute_fov = True
 
     if libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
         player.move(-1, 0)
+        compute_fov = True
 
     if libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
         player.move(1, 0)
+        compute_fov = True
 
     return False
 
@@ -165,22 +188,41 @@ def main():
     print "Enter 2 for randomized Prim's, the mazes have a lot of dead ends."
     choice = int(raw_input())
 
-    libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'maze game', False)
+    print "Would you like to see the maze being formed?"
 
-    con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
+    libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'maze game', False)
+    con = libtcod.console_new(MAP_WIDTH, MAP_HEIGHT)
 
     libtcod.sys_set_fps(LIMIT_FPS)
 
-    cells = kruskal.generate_maze(MAP_ROWS, MAP_COLS)
+    fov_map = libtcod.map_new(MAP_WIDTH, MAP_HEIGHT)
+    global compute_fov
+    compute_fov = False
 
+    for y in xrange(MAP_HEIGHT):
+        for x in xrange(MAP_WIDTH):
+            libtcod.map_set_properties(fov_map, x, y, not True, True)
+
+    if choice == 1:
+        (edges, cell_set, cell_list, cells) = kruskal.init_variables(MAP_ROWS, MAP_COLS)
+
+        while cell_set.size() != 1:
+            cells = kruskal.generate_maze(edges, cell_set, cell_list, cells)
+
+        make_map(cells)
+        render_all(player, con, fov_map, True)
+        libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
+        libtcod.console_flush()
+
+    # (wall_set, cells_finished, cells) = prim.init_variables(MAP_ROWS, MAP_COLS)
+            # cells = prim.generate_maze(wall_set, cells_finished, cells)
     # cells = prim.generate_maze(MAP_ROWS, MAP_COLS)
 
-    make_map(cells)
 
     while not libtcod.console_is_window_closed():
 
         # player.draw(con)
-        render_all(player, con)
+        render_all(player, con, fov_map, True)
 
         libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
         libtcod.console_flush()
@@ -193,6 +235,7 @@ def main():
             break
 
         if quit:
+            render_all(player, con, fov_map, False)
             render_solution(cells, con)
             libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
             libtcod.console_flush()
