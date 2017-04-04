@@ -13,6 +13,9 @@ MAP_WIDTH = TILE_SIZE * MAP_ROWS
 MAP_COLS = 12
 MAP_HEIGHT = TILE_SIZE * MAP_COLS
 
+PANEL_HEIGHT = 10
+PANEL_Y = SCREEN_HEIGHT - PANEL_HEIGHT
+
 LIMIT_FPS = 20
 
 FOV_ALGO = 0 # default field of view algorithm provided by libtcod
@@ -64,7 +67,12 @@ def make_map(cells):
                 map[x * TILE_SIZE + k][(y+1) * TILE_SIZE - 1].wall =  cells[x][y].right
                 map[(x+1) * TILE_SIZE - 1][y * TILE_SIZE + k].wall = cells[x][y].bottom
 
-def render_all(player, con, fov_map, check_explored):
+def erase_map(con):
+    for y in range(MAP_HEIGHT):
+        for x in range(MAP_WIDTH):
+            libtcod.console_put_char_ex(con, x, y, ' ', libtcod.white, libtcod.black)
+
+def render_all(player, con, panel, fov_map, check_explored, msgs):
     libtcod.map_compute_fov(fov_map, player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
 
     for y in range(MAP_HEIGHT):
@@ -73,24 +81,39 @@ def render_all(player, con, fov_map, check_explored):
             compute_fov = False
             wall = map[x][y].wall
             if not visible and (map[x][y].explored or not check_explored):
+                if check_explored:
+                    color = libtcod.grey
+                else:
+                    color = libtcod.white
+
                 if wall:
-                    libtcod.console_put_char_ex(con, x, y, '#', libtcod.grey, libtcod.black)
+                    libtcod.console_put_char_ex(con, x, y, '#', color, libtcod.black)
 
                 else:
-                    libtcod.console_put_char_ex(con, x, y, '.', libtcod.grey, libtcod.black)
+                    libtcod.console_put_char_ex(con, x, y, '.', color, libtcod.black)
 
             if visible:
                 map[x][y].explored = True
                 if wall:
-                    libtcod.console_put_char_ex(con, x, y, '#', libtcod.white, libtcod.black)
+                    libtcod.console_put_char_ex(con, x, y, '#', libtcod.yellow, libtcod.black)
 
                 else:
-                    libtcod.console_put_char_ex(con, x, y, '.', libtcod.white, libtcod.black)
+                    libtcod.console_put_char_ex(con, x, y, '.', libtcod.yellow, libtcod.black)
 
     libtcod.console_put_char_ex(con, MAP_WIDTH-2, MAP_HEIGHT-2, 'X', libtcod.green, libtcod.white)
 
+    render_panel(msgs, panel)
 
     player.draw(con)
+
+def render_panel(msgs, panel):
+    y = 1
+    libtcod.console_clear(panel)
+    for msg in msgs:
+        libtcod.console_set_default_background(panel, libtcod.black)
+        libtcod.console_print_ex(panel, 2, y, libtcod.BKGND_NONE, libtcod.LEFT, msg)
+        libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT,0 ,0, PANEL_Y)
+        y = y + 1;
 
 def render_solution(cells, con):
     visited = [[ False
@@ -188,10 +211,12 @@ def main():
     print "Enter 2 for randomized Prim's, the mazes have a lot of dead ends."
     choice = int(raw_input())
 
-    print "Would you like to see the maze being formed?"
+    print "Would you like to see the maze being formed?(Yes/No)"
+    stepwise = raw_input()
 
     libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'maze game', False)
     con = libtcod.console_new(MAP_WIDTH, MAP_HEIGHT)
+    panel = libtcod.console_new(SCREEN_WIDTH, PANEL_HEIGHT)
 
     libtcod.sys_set_fps(LIMIT_FPS)
 
@@ -206,11 +231,25 @@ def main():
     if choice == 1:
         (edges, cell_set, cell_list, cells) = kruskal.init_variables(MAP_ROWS, MAP_COLS)
 
-        while cell_set.size() != 1:
-            cells = kruskal.generate_maze(edges, cell_set, cell_list, cells)
+        if stepwise == 'Yes':
+            while cell_set.size() != 1:
+                cells = kruskal.generate_maze(edges, cell_set, cell_list, cells)
+                make_map(cells)
+                render_all(player, con, panel, fov_map, False, "The maze is being formed now")
+                libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
+                libtcod.console_flush()
+                erase_map(con)
+
+        else:
+            while cell_set.size() != 1:
+                cells = kruskal.generate_maze(edges, cell_set, cell_list, cells)
 
         make_map(cells)
-        render_all(player, con, fov_map, True)
+        msgs = []
+        msgs.append("Use the arrow keys to move and reach the X on the right corner")
+        msgs.append("Press Esc to display solution and quit")
+        msgs.append("Press F to show full map")
+        render_all(player, con, panel, fov_map, True, msgs)
         libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
         libtcod.console_flush()
 
@@ -222,7 +261,7 @@ def main():
     while not libtcod.console_is_window_closed():
 
         # player.draw(con)
-        render_all(player, con, fov_map, True)
+        render_all(player, con, panel, fov_map, True, msgs)
 
         libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
         libtcod.console_flush()
@@ -232,10 +271,19 @@ def main():
         quit = keyboard_input(player)
 
         if player.x == MAP_WIDTH-2 and player.y == MAP_HEIGHT-2:
+            msgs = []
+            msgs.append("Congratulations! You have won the game")
+            msgs.append("Press any key to exit game now")
+            render_all(player, con, panel, fov_map, False, msgs)
+            libtcod.console_flush()
+
+            key = libtcod.console_wait_for_keypress(True)
             break
 
         if quit:
-            render_all(player, con, fov_map, False)
+            msgs = []
+            msgs.append("Press any key to exit game now")
+            render_all(player, con, panel, fov_map, False, msgs)
             render_solution(cells, con)
             libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
             libtcod.console_flush()
