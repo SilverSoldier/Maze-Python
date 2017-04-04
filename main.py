@@ -53,6 +53,17 @@ def make_map(cells):
         for y in xrange(MAP_HEIGHT) ]
         for x in xrange(MAP_WIDTH) ]
 
+    for y in xrange(MAP_HEIGHT):
+        map[0][y].wall = True
+        map[0][y].explored = True
+        map[MAP_WIDTH - 1][y].wall = True
+        map[MAP_WIDTH - 1][y].explored = True
+
+    for x in xrange(MAP_WIDTH):
+        map[x][0].wall = True
+        map[x][0].explored = True
+        map[x][MAP_HEIGHT - 1].explored = True
+
     for x in range(MAP_ROWS):
         for y in range(MAP_COLS):
             map[x * TILE_SIZE][y * TILE_SIZE].wall = True
@@ -95,12 +106,12 @@ def render_all(player, con, panel, fov_map, check_explored, msgs):
             if visible:
                 map[x][y].explored = True
                 if wall:
-                    libtcod.console_put_char_ex(con, x, y, '#', libtcod.yellow, libtcod.black)
+                    libtcod.console_put_char_ex(con, x, y, '#', libtcod.light_yellow, libtcod.black)
 
                 else:
-                    libtcod.console_put_char_ex(con, x, y, '.', libtcod.yellow, libtcod.black)
+                    libtcod.console_put_char_ex(con, x, y, '.', libtcod.light_yellow, libtcod.black)
 
-    libtcod.console_put_char_ex(con, MAP_WIDTH-2, MAP_HEIGHT-2, 'X', libtcod.green, libtcod.white)
+    libtcod.console_put_char_ex(con, MAP_WIDTH-2, MAP_HEIGHT-2, 'X', libtcod.fuchsia, libtcod.black)
 
     render_panel(msgs, panel)
 
@@ -122,17 +133,39 @@ def render_solution(cells, con):
 
     # print cells[11][0].bottom
 
-    path = [(0, 0)]
+    path = []
     dfs(cells, 0, 0, visited, path)
 
+    # libtcod.console_put_char_ex(con, MAP_WIDTH-2, MAP_HEIGHT-2, 'X', libtcod.green, libtcod.white)
     # print path
 
-    for y in range(MAP_COLS):
-        for x in range(MAP_ROWS):
-            if (x, y) in path:
-                for i in xrange(1, TILE_SIZE - 1):
-                    for j in xrange(1, TILE_SIZE - 1):
-                        libtcod.console_put_char_ex(con, x * TILE_SIZE + i, y * TILE_SIZE + j, 'X', libtcod.green, libtcod.black)
+    for cell in path:
+        # print cell
+        for x in range(1, TILE_SIZE - 1):
+            for y in range(1, TILE_SIZE - 1):
+                libtcod.console_put_char_ex(con, cell[0] * TILE_SIZE + x, cell[1] * TILE_SIZE + y, 'X', libtcod.light_sky, libtcod.black)
+                pass
+
+    for i in range(len(path)-1):
+        if path[i][0] == path[i+1][0]:
+            offset_x = 0
+            offset_y = TILE_SIZE/2
+
+            if path[i][1] > path[i+1][1]:
+                # left cell
+                offset_y *= -1
+        else:
+            offset_x = TILE_SIZE/2
+            offset_y = 0
+
+            if path[i][0] > path[i+1][0]:
+                # upper cell
+                offset_x *= -1
+
+        for x in range(1, TILE_SIZE - 1):
+            for y in range(1, TILE_SIZE - 1):
+                libtcod.console_put_char_ex(con, path[i][0] * TILE_SIZE + x + offset_x, path[i][1] * TILE_SIZE + y + offset_y, 'X', libtcod.dark_sky, libtcod.black) 
+
 
 def dfs(cells, x, y, visited, path):
     # if x < 0 or y < 0 or x >= MAP_ROWS or y >= MAP_COLS:
@@ -149,28 +182,20 @@ def dfs(cells, x, y, visited, path):
 
     visited[x][y] = True
     if not cells[x][y].right:
-        # path.append((x, y+1))
         if dfs(cells, x, y+1, visited, path):
             return True
-        # path.remove((x, y+1))
 
     if not cells[x][y].top:
-        # path.append((x-1, y))
         if dfs(cells, x-1, y, visited, path):
             return True
-        # path.remove((x-1, y))
 
     if not cells[x][y].left:
-        # path.append((x, y-1))
         if dfs(cells, x, y-1, visited, path):
             return True
-        # path.remove((x, y-1))
 
     if not cells[x][y].bottom:
-        # path.append((x+1, y))
         if dfs(cells, x+1, y, visited, path):
             return True
-        # path.remove((x+1, y))
 
     path.remove((x, y))
     return False
