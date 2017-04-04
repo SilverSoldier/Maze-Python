@@ -175,12 +175,18 @@ def dfs(cells, x, y, visited, path):
     path.remove((x, y))
     return False
 
-def keyboard_input(player):
+def keyboard_input(player, con):
+
+    global fog_of_war
 
     key = libtcod.console_wait_for_keypress(True)
 
     if key.vk == libtcod.KEY_ESCAPE:
         return True
+
+    if key.vk == libtcod.KEY_SPACE:
+        fog_of_war = not fog_of_war
+        erase_map(con)
 
     if libtcod.console_is_key_pressed(libtcod.KEY_UP):
         player.move(0, -1)
@@ -248,7 +254,7 @@ def main():
         msgs = []
         msgs.append("Use the arrow keys to move and reach the X on the right corner")
         msgs.append("Press Esc to display solution and quit")
-        msgs.append("Press F to show full map")
+        msgs.append("Press Space to toggle full map")
         render_all(player, con, panel, fov_map, True, msgs)
         libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
         libtcod.console_flush()
@@ -257,18 +263,20 @@ def main():
             # cells = prim.generate_maze(wall_set, cells_finished, cells)
     # cells = prim.generate_maze(MAP_ROWS, MAP_COLS)
 
+    global fog_of_war
+    fog_of_war  = True
 
     while not libtcod.console_is_window_closed():
 
         # player.draw(con)
-        render_all(player, con, panel, fov_map, True, msgs)
+        render_all(player, con, panel, fov_map, fog_of_war, msgs)
 
         libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
         libtcod.console_flush()
 
         player.erase(con)
 
-        quit = keyboard_input(player)
+        quit = keyboard_input(player, con)
 
         if player.x == MAP_WIDTH-2 and player.y == MAP_HEIGHT-2:
             msgs = []
