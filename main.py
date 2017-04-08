@@ -1,6 +1,8 @@
 import libtcodpy as libtcod
+import random
 import kruskal
 import prim
+import binarytree as bt
 
 SCREEN_WIDTH = 110
 SCREEN_HEIGHT = 60
@@ -20,7 +22,14 @@ LIMIT_FPS = 20
 
 FOV_ALGO = 0 # default field of view algorithm provided by libtcod
 FOV_LIGHT_WALLS = True
-TORCH_RADIUS = 40
+TORCH_RADIUS = 4
+
+class Cell:
+    def __init__(self):
+        self.top = True
+        self.bottom = True
+        self.left = True
+        self.right = True
 
 class Object:
     def __init__(self, x, y, char, color):
@@ -95,7 +104,7 @@ def render_all(player, con, panel, fov_map, check_explored, msgs):
                 if check_explored:
                     color = libtcod.grey
                 else:
-                    color = libtcod.white
+                    color = libtcod.light_grey
 
                 if wall:
                     libtcod.console_put_char_ex(con, x, y, '#', color, libtcod.black)
@@ -122,9 +131,18 @@ def render_panel(msgs, panel):
     libtcod.console_clear(panel)
     for msg in msgs:
         libtcod.console_set_default_background(panel, libtcod.black)
-        libtcod.console_print_ex(panel, 2, y, libtcod.BKGND_NONE, libtcod.LEFT, msg)
-        libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT,0 ,0, PANEL_Y)
+        libtcod.console_set_default_foreground(panel, msg[1])
+        libtcod.console_print_ex(panel, 2, y, libtcod.BKGND_NONE, libtcod.LEFT, msg[0])
+        libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0, PANEL_Y)
         y = y + 1;
+
+    global move_count
+
+    if move_count != 0:
+        libtcod.console_set_default_background(panel, libtcod.black)
+        libtcod.console_set_default_foreground(panel, libtcod.sky)
+        libtcod.console_print_ex(panel, 70, 1, libtcod.BKGND_NONE, libtcod.LEFT, "Move count: " + str(move_count))
+        libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0, PANEL_Y)
 
 def render_solution(cells, con):
     visited = [[ False
@@ -136,14 +154,13 @@ def render_solution(cells, con):
     path = []
     dfs(cells, 0, 0, visited, path)
 
-    # libtcod.console_put_char_ex(con, MAP_WIDTH-2, MAP_HEIGHT-2, 'X', libtcod.green, libtcod.white)
     # print path
 
     for cell in path:
         # print cell
         for x in range(1, TILE_SIZE - 1):
             for y in range(1, TILE_SIZE - 1):
-                libtcod.console_put_char_ex(con, cell[0] * TILE_SIZE + x, cell[1] * TILE_SIZE + y, 'X', libtcod.light_sky, libtcod.black)
+                libtcod.console_put_char_ex(con, cell[0] * TILE_SIZE + x, cell[1] * TILE_SIZE + y, '+', libtcod.light_sky, libtcod.black)
                 pass
 
     for i in range(len(path)-1):
@@ -164,15 +181,10 @@ def render_solution(cells, con):
 
         for x in range(1, TILE_SIZE - 1):
             for y in range(1, TILE_SIZE - 1):
-                libtcod.console_put_char_ex(con, path[i][0] * TILE_SIZE + x + offset_x, path[i][1] * TILE_SIZE + y + offset_y, 'X', libtcod.dark_sky, libtcod.black) 
+                libtcod.console_put_char_ex(con, path[i][0] * TILE_SIZE + x + offset_x, path[i][1] * TILE_SIZE + y + offset_y, '+', libtcod.dark_sky, libtcod.black) 
 
 
 def dfs(cells, x, y, visited, path):
-    # if x < 0 or y < 0 or x >= MAP_ROWS or y >= MAP_COLS:
-    #     return False
-
-    # print x
-    # print y
     if visited[x][y]:
         return False
 
@@ -203,6 +215,7 @@ def dfs(cells, x, y, visited, path):
 def keyboard_input(player, con):
 
     global fog_of_war
+    global move_count
 
     key = libtcod.console_wait_for_keypress(True)
 
@@ -216,18 +229,22 @@ def keyboard_input(player, con):
     if libtcod.console_is_key_pressed(libtcod.KEY_UP):
         player.move(0, -1)
         compute_fov = True
+        move_count += 1
 
     if libtcod.console_is_key_pressed(libtcod.KEY_DOWN):
         player.move(0, 1)
         compute_fov = True
+        move_count += 1
 
     if libtcod.console_is_key_pressed(libtcod.KEY_LEFT):
         player.move(-1, 0)
         compute_fov = True
+        move_count += 1
 
     if libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
         player.move(1, 0)
         compute_fov = True
+        move_count += 1
 
     return False
 
@@ -236,14 +253,6 @@ def main():
     player = Object(1, 1, '@', libtcod.red)
 
     libtcod.console_set_custom_font('arial12x12.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-
-    print "Which algorithm would you prefer for generating maze?"
-    print "Enter 1 for randomized Kruskal's, the mazes have a lot of dead ends, but have a regular pattern."
-    print "Enter 2 for randomized Prim's, the mazes have a lot of dead ends."
-    choice = int(raw_input())
-
-    print "Would you like to see the maze being formed?(Yes/No)"
-    stepwise = raw_input()
 
     libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'maze game', False)
     con = libtcod.console_new(MAP_WIDTH, MAP_HEIGHT)
@@ -255,45 +264,107 @@ def main():
     global compute_fov
     compute_fov = False
 
-    for y in xrange(MAP_HEIGHT):
-        for x in xrange(MAP_WIDTH):
-            libtcod.map_set_properties(fov_map, x, y, not True, True)
+    cells = [[ Cell()
+        for y in range(MAP_COLS)]
+        for x in range(MAP_ROWS)]
 
-    if choice == 1:
-        (edges, cell_set, cell_list, cells) = kruskal.init_variables(MAP_ROWS, MAP_COLS)
+    make_map(cells)
 
-        if stepwise == 'Yes':
-            while cell_set.size() != 1:
-                cells = kruskal.generate_maze(edges, cell_set, cell_list, cells)
-                make_map(cells)
-                render_all(player, con, panel, fov_map, False, "The maze is being formed now")
-                libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
-                libtcod.console_flush()
-                erase_map(con)
+    msgs = []
+    choice = 0
 
-        else:
-            while cell_set.size() != 1:
-                cells = kruskal.generate_maze(edges, cell_set, cell_list, cells)
+    global move_count
+    move_count = 0
 
-        make_map(cells)
-        msgs = []
-        msgs.append("Use the arrow keys to move and reach the X on the right corner")
-        msgs.append("Press Esc to display solution and quit")
-        msgs.append("Press Space to toggle full map")
+    while True:
+
+        msgs.append(("Which algorithm would you like to generate the maze?", libtcod.white))
+        msgs.append(("1. Kruskal's algorithm", libtcod.white))
+        msgs.append(("2. Prim's algorithm", libtcod.white))
+        msgs.append(("3. Binary tree method", libtcod.white))
+        msgs.append(("4. Random method", libtcod.white))
+
         render_all(player, con, panel, fov_map, True, msgs)
         libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
         libtcod.console_flush()
 
-    # (wall_set, cells_finished, cells) = prim.init_variables(MAP_ROWS, MAP_COLS)
-            # cells = prim.generate_maze(wall_set, cells_finished, cells)
-    # cells = prim.generate_maze(MAP_ROWS, MAP_COLS)
+        msgs = []
+
+        form_messages = [("Maze has been formed by Kruskal's method", libtcod.green), ("Maze has been formed by Prim's method", libtcod.green), ("Maze has been formed by Binary tree method", libtcod.green)]
+
+        key = libtcod.console_wait_for_keypress(True)
+
+        if key.vk == libtcod.KEY_1:
+            choice = 1
+
+        if key.vk == libtcod.KEY_2:
+            choice = 2
+
+        if key.vk == libtcod.KEY_3:
+            choice = 3
+
+        if key.vk == libtcod.KEY_4:
+            choice = random.randint(0, 3)
+            print choice
+
+        if choice in [1, 2, 3]:
+            msgs.append(form_messages[choice-1])
+            break
+
+        else: 
+            msgs.append(("Sorry that is not an option!", libtcod.red))
+
+    if choice == 1:
+        (edges, cell_set, cell_list, cells) = kruskal.init_variables(MAP_ROWS, MAP_COLS)
+
+        while cell_set.size() != 1:
+            cells = kruskal.generate_maze(edges, cell_set, cell_list, cells)
+
+    if choice == 2:
+        (wall_set, cells_finished, cells) = prim.init_variables(MAP_ROWS, MAP_COLS)
+
+        while len(cells_finished) != MAP_ROWS*MAP_COLS:
+            cells = prim.generate_maze(wall_set, cells_finished, cells, MAP_ROWS, MAP_COLS)
+
+    if choice == 3:
+        (cells) = bt.init_variables(MAP_ROWS, MAP_COLS)
+
+        for x in range(MAP_ROWS-1, -1, -1):
+            for y in range(MAP_COLS):
+                cells = bt.generate_maze(cells, x, y, MAP_ROWS, MAP_COLS)
+
+    make_map(cells)
+    msgs.append(("Game begins", libtcod.white))
+    msgs.append(("", libtcod.white))
+    msgs.append(("Use the arrow keys to move and reach the X on the right corner", libtcod.light_blue))
+    msgs.append(("Press Esc at any time to display solution and quit", libtcod.light_blue))
+    msgs.append(("Press Space to toggle full map", libtcod.light_blue))
+
+    for y in xrange(MAP_HEIGHT):
+        for x in xrange(MAP_WIDTH):
+            libtcod.map_set_properties(fov_map, x, y, not map[x][y].wall, not map[x][y].wall)
+
+    render_all(player, con, panel, fov_map, True, msgs)
+    libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
+    libtcod.console_flush()
 
     global fog_of_war
     fog_of_war  = True
 
     while not libtcod.console_is_window_closed():
 
-        # player.draw(con)
+        if player.x == MAP_WIDTH-2 and player.y == MAP_HEIGHT-2:
+            msgs = []
+            msgs.append(("Congratulations! You have won the game", libtcod.purple))
+            msgs.append(("", libtcod.white))
+            msgs.append(("Press any key to exit game now", libtcod.white))
+            render_all(player, con, panel, fov_map, False, msgs)
+            libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
+            libtcod.console_flush()
+
+            key = libtcod.console_wait_for_keypress(True)
+            break
+
         render_all(player, con, panel, fov_map, fog_of_war, msgs)
 
         libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
@@ -303,19 +374,10 @@ def main():
 
         quit = keyboard_input(player, con)
 
-        if player.x == MAP_WIDTH-2 and player.y == MAP_HEIGHT-2:
-            msgs = []
-            msgs.append("Congratulations! You have won the game")
-            msgs.append("Press any key to exit game now")
-            render_all(player, con, panel, fov_map, False, msgs)
-            libtcod.console_flush()
-
-            key = libtcod.console_wait_for_keypress(True)
-            break
 
         if quit:
             msgs = []
-            msgs.append("Press any key to exit game now")
+            msgs.append(("Press any key to exit game now", libtcod.white))
             render_all(player, con, panel, fov_map, False, msgs)
             render_solution(cells, con)
             libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
