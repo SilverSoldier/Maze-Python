@@ -1,3 +1,5 @@
+""" Helper module to implement prim's method of maze generation
+"""
 import random
 
 class Cell:
@@ -17,10 +19,10 @@ def init_variables(rows, cols):
 
     return (wall_set, cells_finished, cells)
 
+""" Function that takes partially formed cells array and performs one step on it"""
 def generate_maze(wall_set, cells_finished, cells, rows, cols):
     # left: 0, top: 1, right: 2, bottom: 3
 
-    # while len(cells_finished) != 2:
     wall = random.choice(wall_set)
 
     x = wall[0]

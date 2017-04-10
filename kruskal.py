@@ -1,3 +1,5 @@
+""" Helper module to implement maze generation using kruskal's algorithm
+"""
 import random
 import disjoint_set as ds
 
@@ -32,6 +34,7 @@ def init_variables(rows, cols):
 
     return (edges, cell_set, cell_list, cells)
 
+""" Function that takes partially formed cells array and performs one step on it"""
 def generate_maze(edges, cell_set, cell_list, cells):
 
     # choose random wall

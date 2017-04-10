@@ -62,6 +62,7 @@ class Tile:
         self.explored = False
         self.visited = False
 
+""" creates a 2D array of dimensions of map using the cell matrix given as input"""
 def make_map(cells):
     global map
 
@@ -94,11 +95,13 @@ def make_map(cells):
                 map[x * TILE_SIZE + k][(y+1) * TILE_SIZE - 1].wall =  cells[x][y].right
                 map[(x+1) * TILE_SIZE - 1][y * TILE_SIZE + k].wall = cells[x][y].bottom
 
+""" Helper function to clear the entire map's contents"""
 def erase_map(con):
     for y in range(MAP_HEIGHT):
         for x in range(MAP_WIDTH):
             libtcod.console_put_char_ex(con, x, y, ' ', libtcod.white, libtcod.black)
 
+""" Function to render walls of map using fog of war and field of view, panel and player"""
 def render_all(player, con, panel, fov_map, check_explored, msgs):
     libtcod.map_compute_fov(fov_map, player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
 
@@ -133,6 +136,7 @@ def render_all(player, con, panel, fov_map, check_explored, msgs):
 
     player.draw(con)
 
+""" Helper function to render panel"""
 def render_panel(msgs, panel):
     y = 1
     libtcod.console_clear(panel)
@@ -151,12 +155,14 @@ def render_panel(msgs, panel):
         libtcod.console_print_ex(panel, 70, 1, libtcod.BKGND_NONE, libtcod.LEFT, "Move count: " + str(move_count))
         libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0, PANEL_Y)
 
+""" Helper function to render the route player has travelled"""
 def render_travelled(con):
     for y in range(MAP_HEIGHT):
         for x in range(MAP_WIDTH):
             if(map[x][y].visited):
                 libtcod.console_put_char_ex(con, x, y, '+', libtcod.green, libtcod.black)
 
+""" Helper function to render the solution route"""
 def render_solution(cells, con):
     visited = [[ False
         for y in xrange(MAP_COLS)]
@@ -225,6 +231,7 @@ def dfs(cells, x, y, visited, path):
     path.remove((x, y))
     return False
 
+""" Function that takes in keyboard input for player movement, toggling map and exiting"""
 def keyboard_input(player, con):
 
     global fog_of_war
@@ -252,6 +259,7 @@ def keyboard_input(player, con):
 
     return False
 
+""" Helper function to show in-game messages"""
 def in_game_messages(msgs = []):
     msgs.append(("Game is in session...", libtcod.white))
     msgs.append(("", libtcod.white))

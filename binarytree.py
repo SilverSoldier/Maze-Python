@@ -1,3 +1,5 @@
+""" Helper module to implement maze generation using binary tree method
+"""
 import random
 
 class Cell:
@@ -14,6 +16,7 @@ def init_variables(rows, cols):
 
     return cells
 
+""" Function that takes partially formed cells array and performs one step on it"""
 def generate_maze(cells, x, y, rows, cols):
     sides = []
     if y != cols-1:
