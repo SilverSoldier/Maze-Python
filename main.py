@@ -101,7 +101,11 @@ def erase_map(con):
         for x in range(MAP_WIDTH):
             libtcod.console_put_char_ex(con, x, y, ' ', libtcod.white, libtcod.black)
 
-""" Function to render walls of map using fog of war and field of view, panel and player"""
+""" Function to render walls of map using fog of war and field of view, panel and player
+" fov_map: Existing field of view map
+" check_explored: Boolean variable indicating whether fog of war needs to be enabled
+" msgs: msgs to be rendered on panel
+"""
 def render_all(player, con, panel, fov_map, check_explored, msgs):
     libtcod.map_compute_fov(fov_map, player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
 
@@ -136,7 +140,9 @@ def render_all(player, con, panel, fov_map, check_explored, msgs):
 
     player.draw(con)
 
-""" Helper function to render panel"""
+""" Helper function to render panel
+" msgs: messages to be displayed on panel
+"""
 def render_panel(msgs, panel):
     y = 1
     libtcod.console_clear(panel)
@@ -201,7 +207,6 @@ def render_solution(cells, con):
         for x in range(1, TILE_SIZE - 1):
             for y in range(1, TILE_SIZE - 1):
                 libtcod.console_put_char_ex(con, path[i][0] * TILE_SIZE + x + offset_x, path[i][1] * TILE_SIZE + y + offset_y, '+', libtcod.dark_sky, libtcod.black) 
-
 
 def dfs(cells, x, y, visited, path):
     if visited[x][y]:
